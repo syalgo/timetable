@@ -128,11 +128,11 @@
       color:var(--warn);
       background: rgba(0,0,0,.35);
       text-shadow: 0 0 12px rgba(255,43,214,.18);
-      font-size: calc(clamp(16px, 2.0vmin, 26px) * var(--scale));
+      font-size: calc(clamp(18px, 2.3vmin, 30px) * var(--scale));
     }
     td{
       word-break:keep-all;
-      font-size: calc(clamp(18px, 2.2vmin, 30px) * var(--scale));
+      font-size: calc(clamp(20px, 2.5vmin, 36px) * var(--scale));
     }
     .col1{width:32%}
     .col2{width:43%}
@@ -345,7 +345,7 @@
       const h = window.innerHeight;
       let scale = h / 900;
       // 너무 커지거나 작아지지 않게 제한
-      scale = Math.max(0.95, Math.min(1.35, scale));
+      scale = Math.max(1.05, Math.min(1.65, scale));
       document.documentElement.style.setProperty("--scale", String(scale));
     }
 
