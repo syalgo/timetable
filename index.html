@@ -73,7 +73,7 @@
       line-height:1.05;
       font-size: calc(clamp(18px, 2.8vmin, 42px) * var(--topScale));
       overflow:hidden;
-      text-overflow:clip; /* … 안 쓰고, PC는 JS가 줄여서 맞춤 */
+      text-overflow:clip;
     }
     .top-title{
       justify-self:start;
@@ -148,7 +148,7 @@
       width:100%;
       overflow:hidden;
       text-overflow:ellipsis;
-      white-space:nowrap; /* PC: 한 줄 */
+      white-space:nowrap;
     }
 
     .col1{width:32%}
@@ -180,7 +180,7 @@
       body{overflow:auto;}
       .wrap{height:auto; min-height:100vh;}
 
-      /* ✅ 상단: 1줄에 하나씩(겹침 방지) */
+      /* 상단: 1줄에 하나씩 */
       .topline{
         grid-template-columns: 1fr;
         white-space:normal;
@@ -194,6 +194,12 @@
       }
       .top-title, .top-session, .top-now{
         justify-self:start;
+      }
+
+      /* ✅ Now(파란색)만 2줄로 보여주기 */
+      .top-now{
+        white-space:normal;
+        line-height:1.25;
       }
 
       .panel{min-height:auto;}
@@ -232,7 +238,6 @@
         padding-top:2px;
       }
 
-      /* ✅ 모바일: 내용은 줄바꿈 허용(… 금지) */
       td[data-label="내용"] .cellValue{
         white-space:normal;
         overflow:visible;
@@ -240,16 +245,14 @@
         text-align:right;
       }
 
-      /* ✅ 모바일: 시간은 2줄(요청 형식) */
       td[data-label="시간"] .cellValue{
-        white-space:normal;   /* 줄바꿈 허용 */
+        white-space:normal;
         overflow:visible;
         text-overflow:clip;
         text-align:right;
         line-height:1.15;
       }
 
-      /* ✅ 모바일: 진행상황은 한 줄 유지 */
       td[data-label="진행상황"] .cellValue{
         white-space:nowrap;
         overflow:hidden;
@@ -294,10 +297,9 @@
   </div>
 
   <script>
-    /** ====== 설정 ====== */
     const TIMEZONE = "Asia/Seoul";
-    const START_SESSION_DATE = "2025-12-06"; // 1회차
-    const OFF_DATES = new Set(["2026-01-03"]); // 휴강
+    const START_SESSION_DATE = "2025-12-06";
+    const OFF_DATES = new Set(["2026-01-03"]);
 
     const SCHEDULE = [
       { name: "1교시", start: "16:00", end: "17:20" },
@@ -309,7 +311,6 @@
       { name: "시험", start: "21:20", end: "22:00" },
     ];
 
-    /** ====== 유틸 ====== */
     const pad2 = n => String(n).padStart(2, "0");
     const isMobile = () => window.matchMedia("(max-width: 860px)").matches;
 
@@ -351,20 +352,21 @@
       return { mer, h12 };
     }
 
-    /* ===== 시간 표기 =====
-      PC: 4시 ~ 5시 20분(80분) 같은 한 줄
-      Mobile: 4시~5시 20분
-              (80분)
-    */
+    /* ✅ Now: 모바일이면 2줄, PC이면 1줄 */
+    function fmtNowLine(d){
+      const { mer, h12 } = to12(d.getHours());
+      const dateLine = `Now ${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
+      const timeLine = `${mer} ${h12}시 ${pad2(d.getMinutes())}분 ${pad2(d.getSeconds())}초`;
+      return isMobile() ? `${dateLine}<br>${timeLine}` : `${dateLine} ${timeLine}`;
+    }
+
     function fmtStartTime(h, m){
       const { h12 } = to12(h);
       return (m === 0) ? `${h12}시` : `${h12}시 ${m}분`;
     }
     function fmtEndTime(startH, endH, endM){
       const { h12: endH12 } = to12(endH);
-      if(endH === startH){
-        return `${endM}분`; // 5시 20분 ~ 40분
-      }
+      if(endH === startH) return `${endM}분`;
       return (endM === 0) ? `${endH12}시` : `${endH12}시 ${endM}분`;
     }
     function fmtRangeWithDuration(startHHMM, endHHMM){
@@ -380,22 +382,18 @@
       const right = fmtEndTime(sh, eh, em);
 
       if (isMobile()){
-        // ✅ 모바일: (80분)은 다음 줄
         return `${left}~${right}<br><span style="opacity:.9">(${durMin}분)</span>`;
       }
       return `${left} ~ ${right}(${durMin}분)`;
     }
 
-    function fmtNowLine(d){
-      const { mer, h12 } = to12(d.getHours());
-      return `Now ${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 ${mer} ${h12}시 ${pad2(d.getMinutes())}분 ${pad2(d.getSeconds())}초`;
-    }
     function fmtRemain(ms){
       const totalSec = Math.max(0, Math.floor(ms/1000));
       const m = Math.floor(totalSec/60);
       const s = totalSec % 60;
       return `${pad2(m)}분 ${pad2(s)}초 남음`;
     }
+
     function sessionNumberFor(dateYMD){
       const target = parseYMD(dateYMD);
       const start = parseYMD(START_SESSION_DATE);
@@ -408,7 +406,6 @@
       return count;
     }
 
-    /** PC 상단 한 줄 유지(넘치면 축소) */
     function fitToplinePC(){
       if (isMobile()) return;
       const topline = document.getElementById("topline");
@@ -424,7 +421,6 @@
       }
     }
 
-    /** PC: 표 스케일/행높이 맞춤 */
     function setMainScale(){
       if (isMobile()) {
         document.documentElement.style.setProperty("--mainScale", "1");
@@ -435,6 +431,7 @@
       s = Math.max(1.10, Math.min(1.90, s));
       document.documentElement.style.setProperty("--mainScale", String(s));
     }
+
     function fitRows(){
       if (isMobile()) return;
 
@@ -454,6 +451,7 @@
 
       rows.forEach(r => { r.style.height = finalH + "px"; });
     }
+
     function tableOverflows(){
       const cells = document.querySelectorAll("#mainTable th, #mainTable td");
       for (const cell of cells){
@@ -462,6 +460,7 @@
       }
       return false;
     }
+
     function fitMainScaleToTable(){
       if (isMobile()) return;
 
@@ -475,10 +474,9 @@
       }
     }
 
-    /** ====== 렌더 ====== */
     function render(){
       const now = nowSeoul();
-      document.getElementById("nowText").textContent = fmtNowLine(now);
+      document.getElementById("nowText").innerHTML = fmtNowLine(now);
 
       const todayKey = ymd(now);
       const isSat = (now.getDay() === 6);
@@ -542,7 +540,7 @@
       requestAnimationFrame(() => {
         setMainScale();
         fitMainScaleToTable();
-        fitToplinePC(); // PC만 한 줄 맞춤(모바일은 1줄1항목이라 필요 없음)
+        fitToplinePC();
       });
     }
 
