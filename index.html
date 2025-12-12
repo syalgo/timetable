@@ -178,4 +178,193 @@
 
     <div class="topline">
       <div class="topitem top-title">2026정보올림피아드 준비 in 세영로보틱스</div>
-      <div class="topitem top-session" id="sessionLabel">0회차
+      <div class="topitem top-session" id="sessionLabel">0회차</div>
+      <div class="topitem top-now" id="nowText">Now -</div>
+    </div>
+
+    <div class="panel">
+      <table>
+        <thead>
+          <tr>
+            <th class="col1">내용</th>
+            <th class="col2">시간</th>
+            <th class="col3">진행상황</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+
+      <div class="notice">
+        <div>시험 결과에 따라 부족한 부분은 <b>평일 보충 수업 진행</b></div>
+        <div>26년 1월 3일(토)은 <b>휴강!</b> 새해 복 많이 받으세요 ( __)</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /** ====== 설정 ====== */
+    const TIMEZONE = "Asia/Seoul";
+    const START_SESSION_DATE = "2025-12-06"; // 1회차
+    const OFF_DATES = new Set(["2026-01-03"]); // 휴강
+
+    const SCHEDULE = [
+      { name: "1교시", start: "16:00", end: "17:20" },
+      { name: "개인 정비 및 쉬는 시간", start: "17:20", end: "17:40" },
+      { name: "2교시", start: "17:40", end: "19:00" },
+      { name: "저녁식사", start: "19:00", end: "19:40" },
+      { name: "3교시", start: "19:40", end: "21:00" },
+      { name: "개인 정비 및 쉬는 시간", start: "21:00", end: "21:20" },
+      { name: "시험", start: "21:20", end: "22:00" },
+    ];
+
+    /** ====== 유틸 ====== */
+    const pad2 = n => String(n).padStart(2, "0");
+
+    function nowSeoul(){
+      return new Date(new Date().toLocaleString("en-US", { timeZone: TIMEZONE }));
+    }
+    function ymd(d){
+      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+    }
+    function parseYMD(str){
+      const [y,m,dd] = str.split("-").map(Number);
+      const d = nowSeoul();
+      d.setFullYear(y, m-1, dd);
+      d.setHours(0,0,0,0);
+      return d;
+    }
+    function addDays(d, days){
+      const x = new Date(d);
+      x.setDate(x.getDate() + days);
+      return x;
+    }
+    function nextSaturday(d){
+      const day = d.getDay();
+      const diff = (6 - day + 7) % 7;
+      const t = addDays(d, diff);
+      t.setHours(0,0,0,0);
+      return t;
+    }
+    function dateAt(baseDate, hhmm){
+      const [hh, mm] = hhmm.split(":").map(Number);
+      const d = new Date(baseDate);
+      d.setHours(hh, mm, 0, 0);
+      return d;
+    }
+
+    // 12시간제
+    function to12(h){
+      const mer = (h < 12) ? "오전" : "오후";
+      const h12 = ((h + 11) % 12) + 1;
+      return { mer, h12 };
+    }
+    function fmtTime12K(h, m, withMeridiem=false){
+      const { mer, h12 } = to12(h);
+      const core = (m === 0) ? `${h12}시` : `${h12}시 ${m}분`;
+      return withMeridiem ? `${mer} ${core}` : core;
+    }
+    function fmtRangeWithDuration(startHHMM, endHHMM){
+      const base = nowSeoul(); base.setHours(0,0,0,0);
+      const s = dateAt(base, startHHMM);
+      const e = dateAt(base, endHHMM);
+      const durMin = Math.round((e - s) / 60000);
+      return `${fmtTime12K(s.getHours(), s.getMinutes())} ~ ${fmtTime12K(e.getHours(), e.getMinutes())}(${durMin}분)`;
+    }
+    function fmtNowLine(d){
+      return `Now ${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 ${fmtTime12K(d.getHours(), d.getMinutes(), true)} ${pad2(d.getSeconds())}초`;
+    }
+    function fmtRemain(ms){
+      const totalSec = Math.max(0, Math.floor(ms/1000));
+      const m = Math.floor(totalSec/60);
+      const s = totalSec % 60;
+      return `${pad2(m)}분 ${pad2(s)}초 남음`;
+    }
+
+    function sessionNumberFor(dateYMD){
+      const target = parseYMD(dateYMD);
+      const start = parseYMD(START_SESSION_DATE);
+      if(target < start) return 0;
+
+      let count = 0;
+      for(let d = new Date(start); d <= target; d = addDays(d, 7)){
+        if(!OFF_DATES.has(ymd(d))) count++;
+      }
+      return count;
+    }
+
+    /** ====== 렌더 ====== */
+    function render(){
+      const now = nowSeoul();
+      document.getElementById("nowText").textContent = fmtNowLine(now);
+
+      const todayKey = ymd(now);
+      const isSaturday = (now.getDay() === 6);
+      const isOffDay = OFF_DATES.has(todayKey);
+
+      // 회차: 토요일이면 오늘 기준, 아니면 다음 토요일 기준
+      let sessionBase = isSaturday ? (() => { const d = new Date(now); d.setHours(0,0,0,0); return d; })()
+                                  : nextSaturday(now);
+
+      if(OFF_DATES.has(ymd(sessionBase))) sessionBase = addDays(sessionBase, 7);
+
+      const sessionNo = sessionNumberFor(ymd(sessionBase));
+
+      // ✅ 회차 표시: 2 -> "2회차", 10 -> "10회차" (앞에 0 붙이지 않음)
+      document.getElementById("sessionLabel").textContent =
+        (sessionNo > 0) ? `${sessionNo}회차` : `0회차`;
+
+      const tbody = document.getElementById("tbody");
+      tbody.innerHTML = "";
+
+      // 토요일(휴강 제외)만 카운트
+      const enableCountdown = isSaturday && !isOffDay;
+
+      let activeIndex = -1;
+      if(enableCountdown){
+        const base = new Date(now); base.setHours(0,0,0,0);
+        for(let i=0;i<SCHEDULE.length;i++){
+          const s = dateAt(base, SCHEDULE[i].start);
+          const e = dateAt(base, SCHEDULE[i].end);
+          if(now >= s && now < e){ activeIndex = i; break; }
+        }
+      }
+
+      const baseToday = new Date(now); baseToday.setHours(0,0,0,0);
+
+      SCHEDULE.forEach((item, idx) => {
+        const tr = document.createElement("tr");
+        if(idx === activeIndex) tr.classList.add("active");
+
+        const td1 = document.createElement("td");
+        td1.textContent = item.name;
+        td1.setAttribute("data-label", "내용");
+
+        const td2 = document.createElement("td");
+        td2.textContent = fmtRangeWithDuration(item.start, item.end);
+        td2.setAttribute("data-label", "시간");
+
+        const td3 = document.createElement("td");
+        td3.setAttribute("data-label", "진행상황");
+
+        if(!enableCountdown){
+          td3.innerHTML = `<span class="status-plan">예정</span>`;
+        }else{
+          const s = dateAt(baseToday, item.start);
+          const e = dateAt(baseToday, item.end);
+          if(now < s) td3.innerHTML = `<span class="status-plan">예정</span>`;
+          else if(now >= e) td3.innerHTML = `<span class="status-done">완료</span>`;
+          else td3.innerHTML = `<span class="status-live">${fmtRemain(e - now)}</span>`;
+        }
+
+        tr.appendChild(td1);
+        tr.appendChild(td2);
+        tr.appendChild(td3);
+        tbody.appendChild(tr);
+      });
+    }
+
+    render();
+    setInterval(render, 1000);
+  </script>
+</body>
+</html>
