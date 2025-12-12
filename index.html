@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>수업 타이머 보드</title>
+  <style>
+    :root{
+      --bg:#000;
+      --red:#ff0000;
+      --yellow:#ffe600;
+      --cyan:#00d7ff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:#fff;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+    }
+    .wrap{max-width:1200px;margin:0 auto;padding:22px 22px 40px}
+    .top{
+      display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
+      margin-bottom:10px;
+    }
+    .session{
+      font-size:44px;
+      font-weight:900;
+      color:#ff9f00;
+      letter-spacing:1px;
+    }
+    .clock{
+      text-align:right;
+      font-size:22px;
+      font-weight:800;
+      color:var(--cyan);
+      margin-top:8px;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      table-layout:fixed;
+      border:6px solid var(--red);
+    }
+    th, td{
+      border:4px solid var(--red);
+      padding:16px 14px;
+      text-align:center;
+      font-weight:900;
+    }
+    th{
+      font-size:26px;
+      color:#ff0000;
+      background:#000;
+    }
+    td{font-size:26px}
+    .col1{width:26%}
+    .col2{width:30%}
+    .col3{width:44%}
+
+    /* 진행중 행 강조 */
+    tr.active td{
+      background:var(--yellow);
+      color:#000;
+    }
+
+    /* 상태 텍스트 느낌 */
+    .done{color:#ff0000}
+    .soon{color:#ffffff}
+    .run{color:#00ff66}
+    .remain{color:#ff0000}
+
+    .hint{
+      margin-top:10px;
+      opacity:.75;
+      font-size:14px;
+      line-height:1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div></div>
+      <div>
+        <div class="session" id="sessionTitle">2회차</div>
+        <div class="clock" id="clock">현재시간 --시 --분 --초</div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th class="col1">내용</th>
+          <th class="col2">시간</th>
+          <th class="col3">남은시간</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <div class="hint">
+      ※ 모든 강의실에서 동일하게 보이게 하려면 이 페이지를 GitHub Pages 같은 곳에 올리고 같은 URL로 접속하면 됩니다.<br>
+      ※ 남은시간은 각 PC의 “현재시간”을 기준으로 계산됩니다. (PC 시간이 틀리면 표시도 틀어져요)
+    </div>
+  </div>
+
+  <script>
+    // ✅ 여기만 수정하면 됨 (오늘 기준 HH:MM)
+    const SESSION_TITLE = "2회차";
+    const SCHEDULE = [
+      { name: "1교시", start: "16:00", end: "17:20" },
+      { name: "쉬는시간", start: "17:20", end: "17:40" },
+      { name: "2교시", start: "17:40", end: "18:50" },
+      { name: "정리", start: "18:50", end: "19:00" }
+    ];
+
+    document.getElementById("sessionTitle").textContent = SESSION_TITLE;
+
+    const pad2 = n => String(n).padStart(2, "0");
+
+    function toDateToday(hhmm){
+      const [hh, mm] = hhmm.split(":").map(Number);
+      const d = new Date();
+      d.setHours(hh, mm, 0, 0);
+      return d;
+    }
+
+    function formatRange(s, e){
+      const [sh, sm] = s.split(":");
+      const [eh, em] = e.split(":");
+      return `${Number(sh)}시~${Number(eh)}시 ${pad2(em)}분`.replace("시~","시~");
+      // 위 한 줄은 너가 원하는 표기 스타일에 맞춰도 됨
+    }
+
+    function fmtKoreanHMS(date){
+      return `현재시간 ${date.getHours()}시 ${date.getMinutes()}분 ${date.getSeconds()}초`;
+    }
+
+    function fmtRemain(ms){
+      if(ms < 0) ms = 0;
+      const totalSec = Math.floor(ms/1000);
+      const m = Math.floor(totalSec/60);
+      const s = totalSec % 60;
+      return `${m}분 ${s}초 남음`;
+    }
+
+    function render(){
+      const now = new Date();
+      document.getElementById("clock").textContent = fmtKoreanHMS(now);
+
+      const tbody = document.getElementById("tbody");
+      tbody.innerHTML = "";
+
+      let activeIndex = -1;
+
+      // 진행중 찾기
+      const windows = SCHEDULE.map(item => ({
+        ...item,
+        sDate: toDateToday(item.start),
+        eDate: toDateToday(item.end),
+      }));
+
+      for(let i=0;i<windows.length;i++){
+        if(now >= windows[i].sDate && now < windows[i].eDate){
+          activeIndex = i;
+          break;
+        }
+      }
+
+      windows.forEach((item, idx) => {
+        const tr = document.createElement("tr");
+        if(idx === activeIndex) tr.classList.add("active");
+
+        const td1 = document.createElement("td");
+        td1.textContent = item.name;
+
+        const td2 = document.createElement("td");
+        // 이미지처럼 “4시~5시 20분” 형태로 보이게:
+        const sh = item.sDate.getHours();
+        const eh = item.eDate.getHours();
+        const em = item.eDate.getMinutes();
+        td2.textContent = `${sh}시~${eh}시 ${pad2(em)}분`;
+
+        const td3 = document.createElement("td");
+
+        if(now >= item.eDate){
+          td3.innerHTML = `<span class="done">완료</span>`;
+        }else if(now >= item.sDate && now < item.eDate){
+          const msLeft = item.eDate - now;
+          td3.innerHTML = `<span class="remain">${fmtRemain(msLeft)}</span>`;
+        }else{
+          // 아직 시작 전(원하면 “시작까지” 표시)
+          const msToStart = item.sDate - now;
+          td3.innerHTML = `<span class="soon">시작까지 ${fmtRemain(msToStart).replace("남음","")}</span>`;
+        }
+
+        tr.appendChild(td1);
+        tr.appendChild(td2);
+        tr.appendChild(td3);
+        tbody.appendChild(tr);
+      });
+    }
+
+    render();
+    setInterval(render, 1000);
+  </script>
+</body>
+</html>
