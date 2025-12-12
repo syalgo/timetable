@@ -7,8 +7,6 @@
   <style>
     :root{
       --bg:#05070a;
-      --panel:#080c10;
-      --grid:#0f1a24;
       --neon:#00ff85;
       --neon2:#00d7ff;
       --warn:#ff2bd6;
@@ -25,8 +23,6 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Noto Sans KR", monospace;
       overflow-x:hidden;
     }
-
-    /* subtle hacker grid + scanlines */
     body::before{
       content:"";
       position:fixed; inset:0;
@@ -46,44 +42,47 @@
       mix-blend-mode: overlay;
     }
 
-    .wrap{max-width:1280px;margin:0 auto;padding:26px 22px 34px}
-    .header{
-      display:flex;justify-content:space-between;align-items:flex-end;gap:16px;
-      margin-bottom:14px;
-    }
-    .title{
-      font-size:34px;
-      font-weight:900;
-      letter-spacing:.3px;
-      color:var(--neon);
-      text-shadow: var(--glow);
-    }
-    .rightBox{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
-    .session{
-      font-size:44px;
-      font-weight:900;
-      color: #ffb100;
-      text-shadow: 0 0 18px rgba(255,177,0,.25);
-    }
-    .now{
-      font-size:20px;
-      font-weight:800;
-      color:var(--neon2);
-      text-shadow: 0 0 14px rgba(0,215,255,.2);
-      text-align:right;
+    .wrap{max-width:1280px;margin:0 auto;padding:22px 14px 28px}
+
+    /* ✅ 1) 상단 1줄, 같은 폰트 사이즈 */
+    .topline{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      flex-wrap:nowrap;
       white-space:nowrap;
+      margin-bottom:12px;
     }
+    .topitem{
+      font-weight:900;
+      font-size: clamp(14px, 2.1vw, 22px); /* 모바일에서도 자동 축소 */
+      letter-spacing:.2px;
+      min-width:0;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .top-title{ color:var(--neon); text-shadow: var(--glow); }
+    .top-session{ color:#ffb100; text-shadow: 0 0 18px rgba(255,177,0,.25); text-align:center; }
+    .top-now{ color:var(--neon2); text-shadow: 0 0 14px rgba(0,215,255,.2); text-align:right; }
 
     .panel{
       background: linear-gradient(180deg, rgba(0,255,133,.06), rgba(0,0,0,.0));
       border:2px solid var(--border);
       border-radius:18px;
       box-shadow: var(--glow);
-      padding:14px;
+      padding:12px;
+    }
+
+    /* ✅ 4) 모바일에서도 비율 유지: 너무 작아지면 가로 스크롤 */
+    .tableWrap{
+      overflow-x:auto;
+      border-radius:14px;
     }
 
     table{
       width:100%;
+      min-width: 820px; /* 폰트가 뭉개지지 않게 최소 폭 유지(모바일은 스크롤) */
       border-collapse:collapse;
       table-layout:fixed;
       background: rgba(0,0,0,.25);
@@ -93,20 +92,22 @@
     }
     th, td{
       border:1px solid rgba(0,255,133,.22);
-      padding:18px 14px;
+      padding:16px 12px;
       text-align:center;
       font-weight:900;
     }
     th{
-      font-size:22px;
+      font-size: clamp(16px, 1.6vw, 22px);
       color:var(--warn);
       background: rgba(0,0,0,.35);
       text-shadow: 0 0 12px rgba(255,43,214,.18);
     }
-    td{font-size:22px}
+    td{
+      font-size: clamp(16px, 1.8vw, 22px);
+    }
     .col1{width:30%}
-    .col2{width:40%}
-    .col3{width:30%}
+    .col2{width:45%}
+    .col3{width:25%}
 
     tr.active td{
       background: rgba(0,255,133,.14);
@@ -117,6 +118,7 @@
     .status-plan{color:rgba(232,255,243,.85)}
     .status-live{color:var(--neon); text-shadow: var(--glow)}
 
+    /* ✅ 3) 하단 문구 더 크게 */
     .notice{
       margin-top:14px;
       padding:14px 16px;
@@ -124,7 +126,7 @@
       border-radius:14px;
       background: rgba(0,0,0,.25);
       line-height:1.6;
-      font-size:16px;
+      font-size: clamp(16px, 2.2vw, 22px);
       color:var(--muted);
     }
     .notice b{color:var(--text)}
@@ -132,25 +134,27 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="header">
-      <div class="title">2026 정보올림피아드 준비 in 세영로보틱스</div>
-      <div class="rightBox">
-        <div class="session" id="sessionLabel">-</div>
-        <div class="now" id="nowText">Now -</div>
-      </div>
+
+    <!-- ✅ 1) 상단 1줄(동일 폰트 크기) -->
+    <div class="topline">
+      <div class="topitem top-title">2026정보올림피아드 준비 in 세영로보틱스</div>
+      <div class="topitem top-session" id="sessionLabel">00회차</div>
+      <div class="topitem top-now" id="nowText">Now -</div>
     </div>
 
     <div class="panel">
-      <table>
-        <thead>
-          <tr>
-            <th class="col1">내용</th>
-            <th class="col2">시간</th>
-            <th class="col3">진행상황</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="col1">내용</th>
+              <th class="col2">시간</th>
+              <th class="col3">진행상황</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
 
       <div class="notice">
         <div>시험 결과에 따라 부족한 부분은 <b>평일 보충 수업 진행</b></div>
@@ -162,13 +166,9 @@
   <script>
     /** ====== 설정 ====== */
     const TIMEZONE = "Asia/Seoul";
+    const START_SESSION_DATE = "2025-12-06"; // 1회차
+    const OFF_DATES = new Set(["2026-01-03"]); // 휴강
 
-    // 회차 기준: 2025-12-06(토) = 1회차
-    const START_SESSION_DATE = "2025-12-06";
-    // 휴강일(회차 카운트에서 제외)
-    const OFF_DATES = new Set(["2026-01-03"]);
-
-    // 시간표(토요일 진행)
     const SCHEDULE = [
       { name: "1교시", start: "16:00", end: "17:20" },
       { name: "개인 정비 및 쉬는 시간", start: "17:20", end: "17:40" },
@@ -183,14 +183,11 @@
     const pad2 = n => String(n).padStart(2, "0");
 
     function nowSeoul(){
-      // timezone 고정(강의실 PC가 다른 timezone이어도 Seoul 기준으로 맞춤)
       return new Date(new Date().toLocaleString("en-US", { timeZone: TIMEZONE }));
     }
-
     function ymd(d){
       return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
     }
-
     function parseYMD(str){
       const [y,m,dd] = str.split("-").map(Number);
       const d = nowSeoul();
@@ -198,22 +195,18 @@
       d.setHours(0,0,0,0);
       return d;
     }
-
     function addDays(d, days){
       const x = new Date(d);
       x.setDate(x.getDate() + days);
       return x;
     }
-
     function nextSaturday(d){
-      // 0:Sun ... 6:Sat
-      const day = d.getDay();
-      const diff = (6 - day + 7) % 7; // 0이면 토요일
+      const day = d.getDay(); // 0~6
+      const diff = (6 - day + 7) % 7;
       const t = addDays(d, diff);
       t.setHours(0,0,0,0);
       return t;
     }
-
     function dateAt(baseDate, hhmm){
       const [hh, mm] = hhmm.split(":").map(Number);
       const d = new Date(baseDate);
@@ -221,24 +214,27 @@
       return d;
     }
 
-    function fmtTimeK(h, m){
-      if(m === 0) return `${h}시`;
-      return `${h}시 ${m}분`;
+    /* ✅ 2) 24시간제 → 12시간제 */
+    function to12(h){
+      const mer = (h < 12) ? "오전" : "오후";
+      const h12 = ((h + 11) % 12) + 1;
+      return { mer, h12 };
     }
-
+    function fmtTime12K(h, m, withMeridiem=false){
+      const { mer, h12 } = to12(h);
+      const core = (m === 0) ? `${h12}시` : `${h12}시 ${m}분`;
+      return withMeridiem ? `${mer} ${core}` : core;
+    }
     function fmtRangeWithDuration(startHHMM, endHHMM){
-      const base = nowSeoul();
-      base.setHours(0,0,0,0);
+      const base = nowSeoul(); base.setHours(0,0,0,0);
       const s = dateAt(base, startHHMM);
       const e = dateAt(base, endHHMM);
       const durMin = Math.round((e - s) / 60000);
-      return `${fmtTimeK(s.getHours(), s.getMinutes())} ~ ${fmtTimeK(e.getHours(), e.getMinutes())}(${durMin}분)`;
+      return `${fmtTime12K(s.getHours(), s.getMinutes())} ~ ${fmtTime12K(e.getHours(), e.getMinutes())}(${durMin}분)`;
     }
-
     function fmtNowLine(d){
-      return `Now ${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 ${pad2(d.getHours())}시 ${pad2(d.getMinutes())}분 ${pad2(d.getSeconds())}초`;
+      return `Now ${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 ${fmtTime12K(d.getHours(), d.getMinutes(), true)} ${pad2(d.getSeconds())}초`;
     }
-
     function fmtRemain(ms){
       const totalSec = Math.max(0, Math.floor(ms/1000));
       const m = Math.floor(totalSec/60);
@@ -247,16 +243,13 @@
     }
 
     function sessionNumberFor(dateYMD){
-      // dateYMD(토요일 기준)가 몇 회차인지 계산(휴강 제외)
       const target = parseYMD(dateYMD);
       const start = parseYMD(START_SESSION_DATE);
       if(target < start) return 0;
 
       let count = 0;
-      // start부터 target까지 토요일만 카운트
       for(let d = new Date(start); d <= target; d = addDays(d, 7)){
-        const key = ymd(d);
-        if(!OFF_DATES.has(key)) count++;
+        if(!OFF_DATES.has(ymd(d))) count++;
       }
       return count;
     }
@@ -270,35 +263,28 @@
       const isSaturday = (now.getDay() === 6);
       const isOffDay = OFF_DATES.has(todayKey);
 
-      // 회차 표시: 토요일이면 "오늘", 토요일이 아니면 "다가오는 토요일" 기준으로 표시
-      let sessionBase = isSaturday ? (function(){
-        const d = new Date(now); d.setHours(0,0,0,0); return d;
-      })() : nextSaturday(now);
+      // 회차: 토요일이면 오늘 기준, 아니면 다음 토요일 기준
+      let sessionBase = isSaturday ? (() => { const d = new Date(now); d.setHours(0,0,0,0); return d; })()
+                                  : nextSaturday(now);
 
-      // 만약 다가오는 토요일이 휴강이면, 그 다음 토요일로 회차 표시
-      if(OFF_DATES.has(ymd(sessionBase))){
-        sessionBase = addDays(sessionBase, 7);
-      }
+      if(OFF_DATES.has(ymd(sessionBase))) sessionBase = addDays(sessionBase, 7);
+
       const sessionNo = sessionNumberFor(ymd(sessionBase));
-      document.getElementById("sessionLabel").textContent = sessionNo > 0 ? `${sessionNo}회차` : `-`;
+      document.getElementById("sessionLabel").textContent = sessionNo > 0 ? `${pad2(sessionNo)}회차` : `00회차`;
 
       const tbody = document.getElementById("tbody");
       tbody.innerHTML = "";
 
-      // 카운트는 "토요일 & 휴강 아님"일 때만 동작
+      // ✅ 토요일(휴강 제외)만 카운트
       const enableCountdown = isSaturday && !isOffDay;
 
-      // active row 찾기(카운트 활성일 때만)
       let activeIndex = -1;
       if(enableCountdown){
         const base = new Date(now); base.setHours(0,0,0,0);
         for(let i=0;i<SCHEDULE.length;i++){
           const s = dateAt(base, SCHEDULE[i].start);
           const e = dateAt(base, SCHEDULE[i].end);
-          if(now >= s && now < e){
-            activeIndex = i;
-            break;
-          }
+          if(now >= s && now < e){ activeIndex = i; break; }
         }
       }
 
@@ -315,26 +301,17 @@
         td2.textContent = fmtRangeWithDuration(item.start, item.end);
 
         const td3 = document.createElement("td");
-
         if(!enableCountdown){
-          // 토요일이 아니면: 전부 "예정"(요구사항 5)
           td3.innerHTML = `<span class="status-plan">예정</span>`;
         }else{
           const s = dateAt(baseToday, item.start);
           const e = dateAt(baseToday, item.end);
-
-          if(now < s){
-            td3.innerHTML = `<span class="status-plan">예정</span>`;
-          }else if(now >= e){
-            td3.innerHTML = `<span class="status-done">완료</span>`;
-          }else{
-            td3.innerHTML = `<span class="status-live">${fmtRemain(e - now)}</span>`;
-          }
+          if(now < s) td3.innerHTML = `<span class="status-plan">예정</span>`;
+          else if(now >= e) td3.innerHTML = `<span class="status-done">완료</span>`;
+          else td3.innerHTML = `<span class="status-live">${fmtRemain(e - now)}</span>`;
         }
 
-        tr.appendChild(td1);
-        tr.appendChild(td2);
-        tr.appendChild(td3);
+        tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
         tbody.appendChild(tr);
       });
     }
