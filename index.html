@@ -255,18 +255,24 @@
       return d;
     }
 
-    // 12시간제
+    // 12시간제 표기
     function to12(h){
       const mer = (h < 12) ? "오전" : "오후";
       const h12 = ((h + 11) % 12) + 1;
       return { mer, h12 };
     }
-
-    // ✅ 짧은 표기: 5시20 / 5시  (분/공백 제거)
-    function fmtTime12K(h, m, withMeridiem=false){
-      const { mer, h12 } = to12(h);
-      const core = (m === 0) ? `${h12}시` : `${h12}시${m}`;
-      return withMeridiem ? `${mer} ${core}` : core;
+    function fmtStartTime(h, m){
+      // 시작: "5시 20분" 또는 "7시"
+      const { h12 } = to12(h);
+      return (m === 0) ? `${h12}시` : `${h12}시 ${m}분`;
+    }
+    function fmtEndTime(startH, endH, endM){
+      // 끝: 같은 시면 "40분" / 시가 바뀌면 "7시" 또는 "5시 20분"
+      const { h12: endH12 } = to12(endH);
+      if(endH === startH){
+        return `${endM}분`; // 요청 핵심: 5시 20분 ~ 40분
+      }
+      return (endM === 0) ? `${endH12}시` : `${endH12}시 ${endM}분`;
     }
 
     function fmtRangeWithDuration(startHHMM, endHHMM){
@@ -274,11 +280,20 @@
       const s = dateAt(base, startHHMM);
       const e = dateAt(base, endHHMM);
       const durMin = Math.round((e - s) / 60000);
-      return `${fmtTime12K(s.getHours(), s.getMinutes())} ~ ${fmtTime12K(e.getHours(), e.getMinutes())}(${durMin}분)`;
+
+      const sh = s.getHours(), sm = s.getMinutes();
+      const eh = e.getHours(), em = e.getMinutes();
+
+      const left = fmtStartTime(sh, sm);
+      const right = fmtEndTime(sh, eh, em);
+
+      return `${left} ~ ${right}(${durMin}분)`;
     }
 
     function fmtNowLine(d){
-      return `Now ${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 ${fmtTime12K(d.getHours(), d.getMinutes(), true)} ${pad2(d.getSeconds())}초`;
+      // ✅ 상단 Now: "분" 포함
+      const { mer, h12 } = to12(d.getHours());
+      return `Now ${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 ${mer} ${h12}시 ${pad2(d.getMinutes())}분 ${pad2(d.getSeconds())}초`;
     }
 
     function fmtRemain(ms){
@@ -348,7 +363,7 @@
         const td2 = document.createElement("td");
         td2.textContent = fmtRangeWithDuration(item.start, item.end);
         td2.setAttribute("data-label", "시간");
-        td2.classList.add("timeCell"); // ✅ 모바일에서 한 줄 고정
+        td2.classList.add("timeCell");
 
         const td3 = document.createElement("td");
         td3.setAttribute("data-label", "진행상황");
