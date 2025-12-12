@@ -3,173 +3,308 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>수업 타이머 보드</title>
+  <title>2026 정보올림피아드 준비 in 세영로보틱스</title>
   <style>
     :root{
-      --bg:#000;
-      --red:#ff0000;
-      --yellow:#ffe600;
-      --cyan:#00d7ff;
+      --bg:#05070a;
+      --panel:#080c10;
+      --grid:#0f1a24;
+      --neon:#00ff85;
+      --neon2:#00d7ff;
+      --warn:#ff2bd6;
+      --text:#e8fff3;
+      --muted:#b7c7bf;
+      --border:rgba(0,255,133,.55);
+      --glow:0 0 18px rgba(0,255,133,.35);
     }
     *{box-sizing:border-box}
     body{
       margin:0;
-      background:var(--bg);
-      color:#fff;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+      background: radial-gradient(1200px 700px at 20% 0%, #0b1620 0%, var(--bg) 55%, #020305 100%);
+      color:var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Noto Sans KR", monospace;
+      overflow-x:hidden;
     }
-    .wrap{max-width:1200px;margin:0 auto;padding:22px 22px 40px}
-    .top{
-      display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
-      margin-bottom:10px;
+
+    /* subtle hacker grid + scanlines */
+    body::before{
+      content:"";
+      position:fixed; inset:0;
+      background:
+        linear-gradient(rgba(0,255,133,.06) 1px, transparent 1px) 0 0/100% 36px,
+        linear-gradient(90deg, rgba(0,255,133,.05) 1px, transparent 1px) 0 0/64px 100%;
+      pointer-events:none;
+      opacity:.35;
     }
+    body::after{
+      content:"";
+      position:fixed; inset:0;
+      background: linear-gradient(transparent 0%, rgba(255,255,255,.03) 50%, transparent 100%);
+      background-size: 100% 4px;
+      pointer-events:none;
+      opacity:.25;
+      mix-blend-mode: overlay;
+    }
+
+    .wrap{max-width:1280px;margin:0 auto;padding:26px 22px 34px}
+    .header{
+      display:flex;justify-content:space-between;align-items:flex-end;gap:16px;
+      margin-bottom:14px;
+    }
+    .title{
+      font-size:34px;
+      font-weight:900;
+      letter-spacing:.3px;
+      color:var(--neon);
+      text-shadow: var(--glow);
+    }
+    .rightBox{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
     .session{
       font-size:44px;
       font-weight:900;
-      color:#ff9f00;
-      letter-spacing:1px;
+      color: #ffb100;
+      text-shadow: 0 0 18px rgba(255,177,0,.25);
     }
-    .clock{
-      text-align:right;
-      font-size:22px;
+    .now{
+      font-size:20px;
       font-weight:800;
-      color:var(--cyan);
-      margin-top:8px;
+      color:var(--neon2);
+      text-shadow: 0 0 14px rgba(0,215,255,.2);
+      text-align:right;
+      white-space:nowrap;
+    }
+
+    .panel{
+      background: linear-gradient(180deg, rgba(0,255,133,.06), rgba(0,0,0,.0));
+      border:2px solid var(--border);
+      border-radius:18px;
+      box-shadow: var(--glow);
+      padding:14px;
     }
 
     table{
       width:100%;
       border-collapse:collapse;
       table-layout:fixed;
-      border:6px solid var(--red);
+      background: rgba(0,0,0,.25);
+      border:2px solid var(--border);
+      border-radius:14px;
+      overflow:hidden;
     }
     th, td{
-      border:4px solid var(--red);
-      padding:16px 14px;
+      border:1px solid rgba(0,255,133,.22);
+      padding:18px 14px;
       text-align:center;
       font-weight:900;
     }
     th{
-      font-size:26px;
-      color:#ff0000;
-      background:#000;
+      font-size:22px;
+      color:var(--warn);
+      background: rgba(0,0,0,.35);
+      text-shadow: 0 0 12px rgba(255,43,214,.18);
     }
-    td{font-size:26px}
-    .col1{width:26%}
-    .col2{width:30%}
-    .col3{width:44%}
+    td{font-size:22px}
+    .col1{width:30%}
+    .col2{width:40%}
+    .col3{width:30%}
 
-    /* 진행중 행 강조 */
     tr.active td{
-      background:var(--yellow);
-      color:#000;
+      background: rgba(0,255,133,.14);
+      box-shadow: inset 0 0 0 1px rgba(0,255,133,.35);
     }
 
-    /* 상태 텍스트 느낌 */
-    .done{color:#ff0000}
-    .soon{color:#ffffff}
-    .run{color:#00ff66}
-    .remain{color:#ff0000}
+    .status-done{color:rgba(232,255,243,.55)}
+    .status-plan{color:rgba(232,255,243,.85)}
+    .status-live{color:var(--neon); text-shadow: var(--glow)}
 
-    .hint{
-      margin-top:10px;
-      opacity:.75;
-      font-size:14px;
-      line-height:1.4;
+    .notice{
+      margin-top:14px;
+      padding:14px 16px;
+      border:1px solid rgba(0,255,133,.25);
+      border-radius:14px;
+      background: rgba(0,0,0,.25);
+      line-height:1.6;
+      font-size:16px;
+      color:var(--muted);
     }
+    .notice b{color:var(--text)}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="top">
-      <div></div>
-      <div>
-        <div class="session" id="sessionTitle">2회차</div>
-        <div class="clock" id="clock">현재시간 --시 --분 --초</div>
+    <div class="header">
+      <div class="title">2026 정보올림피아드 준비 in 세영로보틱스</div>
+      <div class="rightBox">
+        <div class="session" id="sessionLabel">-</div>
+        <div class="now" id="nowText">Now -</div>
       </div>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th class="col1">내용</th>
-          <th class="col2">시간</th>
-          <th class="col3">남은시간</th>
-        </tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
+    <div class="panel">
+      <table>
+        <thead>
+          <tr>
+            <th class="col1">내용</th>
+            <th class="col2">시간</th>
+            <th class="col3">진행상황</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
 
-    <div class="hint">
-      ※ 모든 강의실에서 동일하게 보이게 하려면 이 페이지를 GitHub Pages 같은 곳에 올리고 같은 URL로 접속하면 됩니다.<br>
-      ※ 남은시간은 각 PC의 “현재시간”을 기준으로 계산됩니다. (PC 시간이 틀리면 표시도 틀어져요)
+      <div class="notice">
+        <div>시험 결과에 따라 부족한 부분은 <b>평일 보충 수업 진행</b></div>
+        <div>26년 1월 3일(토)은 <b>휴강!</b> 새해 복 많이 받으세요 ( __)</div>
+      </div>
     </div>
   </div>
 
   <script>
-    // ✅ 여기만 수정하면 됨 (오늘 기준 HH:MM)
-    const SESSION_TITLE = "2회차";
+    /** ====== 설정 ====== */
+    const TIMEZONE = "Asia/Seoul";
+
+    // 회차 기준: 2025-12-06(토) = 1회차
+    const START_SESSION_DATE = "2025-12-06";
+    // 휴강일(회차 카운트에서 제외)
+    const OFF_DATES = new Set(["2026-01-03"]);
+
+    // 시간표(토요일 진행)
     const SCHEDULE = [
       { name: "1교시", start: "16:00", end: "17:20" },
-      { name: "쉬는시간", start: "17:20", end: "17:40" },
-      { name: "2교시", start: "17:40", end: "18:50" },
-      { name: "정리", start: "18:50", end: "19:00" }
+      { name: "개인 정비 및 쉬는 시간", start: "17:20", end: "17:40" },
+      { name: "2교시", start: "17:40", end: "19:00" },
+      { name: "저녁식사", start: "19:00", end: "19:40" },
+      { name: "3교시", start: "19:40", end: "21:00" },
+      { name: "개인 정비 및 쉬는 시간", start: "21:00", end: "21:20" },
+      { name: "시험", start: "21:20", end: "22:00" },
     ];
 
-    document.getElementById("sessionTitle").textContent = SESSION_TITLE;
-
+    /** ====== 유틸 ====== */
     const pad2 = n => String(n).padStart(2, "0");
 
-    function toDateToday(hhmm){
+    function nowSeoul(){
+      // timezone 고정(강의실 PC가 다른 timezone이어도 Seoul 기준으로 맞춤)
+      return new Date(new Date().toLocaleString("en-US", { timeZone: TIMEZONE }));
+    }
+
+    function ymd(d){
+      return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+    }
+
+    function parseYMD(str){
+      const [y,m,dd] = str.split("-").map(Number);
+      const d = nowSeoul();
+      d.setFullYear(y, m-1, dd);
+      d.setHours(0,0,0,0);
+      return d;
+    }
+
+    function addDays(d, days){
+      const x = new Date(d);
+      x.setDate(x.getDate() + days);
+      return x;
+    }
+
+    function nextSaturday(d){
+      // 0:Sun ... 6:Sat
+      const day = d.getDay();
+      const diff = (6 - day + 7) % 7; // 0이면 토요일
+      const t = addDays(d, diff);
+      t.setHours(0,0,0,0);
+      return t;
+    }
+
+    function dateAt(baseDate, hhmm){
       const [hh, mm] = hhmm.split(":").map(Number);
-      const d = new Date();
+      const d = new Date(baseDate);
       d.setHours(hh, mm, 0, 0);
       return d;
     }
 
-    function formatRange(s, e){
-      const [sh, sm] = s.split(":");
-      const [eh, em] = e.split(":");
-      return `${Number(sh)}시~${Number(eh)}시 ${pad2(em)}분`.replace("시~","시~");
-      // 위 한 줄은 너가 원하는 표기 스타일에 맞춰도 됨
+    function fmtTimeK(h, m){
+      if(m === 0) return `${h}시`;
+      return `${h}시 ${m}분`;
     }
 
-    function fmtKoreanHMS(date){
-      return `현재시간 ${date.getHours()}시 ${date.getMinutes()}분 ${date.getSeconds()}초`;
+    function fmtRangeWithDuration(startHHMM, endHHMM){
+      const base = nowSeoul();
+      base.setHours(0,0,0,0);
+      const s = dateAt(base, startHHMM);
+      const e = dateAt(base, endHHMM);
+      const durMin = Math.round((e - s) / 60000);
+      return `${fmtTimeK(s.getHours(), s.getMinutes())} ~ ${fmtTimeK(e.getHours(), e.getMinutes())}(${durMin}분)`;
+    }
+
+    function fmtNowLine(d){
+      return `Now ${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 ${pad2(d.getHours())}시 ${pad2(d.getMinutes())}분 ${pad2(d.getSeconds())}초`;
     }
 
     function fmtRemain(ms){
-      if(ms < 0) ms = 0;
-      const totalSec = Math.floor(ms/1000);
+      const totalSec = Math.max(0, Math.floor(ms/1000));
       const m = Math.floor(totalSec/60);
       const s = totalSec % 60;
-      return `${m}분 ${s}초 남음`;
+      return `${pad2(m)}분 ${pad2(s)}초 남음`;
     }
 
+    function sessionNumberFor(dateYMD){
+      // dateYMD(토요일 기준)가 몇 회차인지 계산(휴강 제외)
+      const target = parseYMD(dateYMD);
+      const start = parseYMD(START_SESSION_DATE);
+      if(target < start) return 0;
+
+      let count = 0;
+      // start부터 target까지 토요일만 카운트
+      for(let d = new Date(start); d <= target; d = addDays(d, 7)){
+        const key = ymd(d);
+        if(!OFF_DATES.has(key)) count++;
+      }
+      return count;
+    }
+
+    /** ====== 렌더 ====== */
     function render(){
-      const now = new Date();
-      document.getElementById("clock").textContent = fmtKoreanHMS(now);
+      const now = nowSeoul();
+      document.getElementById("nowText").textContent = fmtNowLine(now);
+
+      const todayKey = ymd(now);
+      const isSaturday = (now.getDay() === 6);
+      const isOffDay = OFF_DATES.has(todayKey);
+
+      // 회차 표시: 토요일이면 "오늘", 토요일이 아니면 "다가오는 토요일" 기준으로 표시
+      let sessionBase = isSaturday ? (function(){
+        const d = new Date(now); d.setHours(0,0,0,0); return d;
+      })() : nextSaturday(now);
+
+      // 만약 다가오는 토요일이 휴강이면, 그 다음 토요일로 회차 표시
+      if(OFF_DATES.has(ymd(sessionBase))){
+        sessionBase = addDays(sessionBase, 7);
+      }
+      const sessionNo = sessionNumberFor(ymd(sessionBase));
+      document.getElementById("sessionLabel").textContent = sessionNo > 0 ? `${sessionNo}회차` : `-`;
 
       const tbody = document.getElementById("tbody");
       tbody.innerHTML = "";
 
+      // 카운트는 "토요일 & 휴강 아님"일 때만 동작
+      const enableCountdown = isSaturday && !isOffDay;
+
+      // active row 찾기(카운트 활성일 때만)
       let activeIndex = -1;
-
-      // 진행중 찾기
-      const windows = SCHEDULE.map(item => ({
-        ...item,
-        sDate: toDateToday(item.start),
-        eDate: toDateToday(item.end),
-      }));
-
-      for(let i=0;i<windows.length;i++){
-        if(now >= windows[i].sDate && now < windows[i].eDate){
-          activeIndex = i;
-          break;
+      if(enableCountdown){
+        const base = new Date(now); base.setHours(0,0,0,0);
+        for(let i=0;i<SCHEDULE.length;i++){
+          const s = dateAt(base, SCHEDULE[i].start);
+          const e = dateAt(base, SCHEDULE[i].end);
+          if(now >= s && now < e){
+            activeIndex = i;
+            break;
+          }
         }
       }
 
-      windows.forEach((item, idx) => {
+      const baseToday = new Date(now); baseToday.setHours(0,0,0,0);
+
+      SCHEDULE.forEach((item, idx) => {
         const tr = document.createElement("tr");
         if(idx === activeIndex) tr.classList.add("active");
 
@@ -177,23 +312,24 @@
         td1.textContent = item.name;
 
         const td2 = document.createElement("td");
-        // 이미지처럼 “4시~5시 20분” 형태로 보이게:
-        const sh = item.sDate.getHours();
-        const eh = item.eDate.getHours();
-        const em = item.eDate.getMinutes();
-        td2.textContent = `${sh}시~${eh}시 ${pad2(em)}분`;
+        td2.textContent = fmtRangeWithDuration(item.start, item.end);
 
         const td3 = document.createElement("td");
 
-        if(now >= item.eDate){
-          td3.innerHTML = `<span class="done">완료</span>`;
-        }else if(now >= item.sDate && now < item.eDate){
-          const msLeft = item.eDate - now;
-          td3.innerHTML = `<span class="remain">${fmtRemain(msLeft)}</span>`;
+        if(!enableCountdown){
+          // 토요일이 아니면: 전부 "예정"(요구사항 5)
+          td3.innerHTML = `<span class="status-plan">예정</span>`;
         }else{
-          // 아직 시작 전(원하면 “시작까지” 표시)
-          const msToStart = item.sDate - now;
-          td3.innerHTML = `<span class="soon">시작까지 ${fmtRemain(msToStart).replace("남음","")}</span>`;
+          const s = dateAt(baseToday, item.start);
+          const e = dateAt(baseToday, item.end);
+
+          if(now < s){
+            td3.innerHTML = `<span class="status-plan">예정</span>`;
+          }else if(now >= e){
+            td3.innerHTML = `<span class="status-done">완료</span>`;
+          }else{
+            td3.innerHTML = `<span class="status-live">${fmtRemain(e - now)}</span>`;
+          }
         }
 
         tr.appendChild(td1);
