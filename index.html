@@ -16,7 +16,6 @@
       --border:rgba(0,255,133,.55);
       --glow:0 0 18px rgba(0,255,133,.35);
 
-      /* JS가 조절 */
       --topScale: 1;
       --mainScale: 1;
     }
@@ -59,7 +58,7 @@
       gap: clamp(8px, 1.0vmin, 12px);
     }
 
-    /* ✅ 상단: 모든 기기에서 “한 줄” 유지(넘치면 JS가 축소) */
+    /* ===== PC 상단: 한 줄 ===== */
     .topline{
       display:grid;
       grid-template-columns: 1fr auto 1fr;
@@ -71,16 +70,15 @@
     .topitem{
       font-weight:900;
       letter-spacing:.2px;
-      line-height:1;
+      line-height:1.05;
       font-size: calc(clamp(18px, 2.8vmin, 42px) * var(--topScale));
+      overflow:hidden;
+      text-overflow:clip; /* … 안 쓰고, PC는 JS가 줄여서 맞춤 */
     }
-    /* ✅ ellipsis 제거(잘림/… 방지). 대신 JS가 글자를 줄여서 맞춤 */
     .top-title{
       justify-self:start;
       color:var(--neon);
       text-shadow: var(--glow);
-      overflow:hidden;
-      text-overflow:clip;
     }
     .top-session{
       justify-self:center;
@@ -91,8 +89,6 @@
       justify-self:end;
       color:var(--neon2);
       text-shadow: 0 0 14px rgba(0,215,255,.2);
-      overflow:hidden;
-      text-overflow:clip;
     }
 
     .panel{
@@ -179,10 +175,26 @@
     }
     .notice b{color:var(--text)}
 
-    /* ===== 모바일: 카드형 ===== */
+    /* ===== 모바일 ===== */
     @media (max-width: 860px){
       body{overflow:auto;}
       .wrap{height:auto; min-height:100vh;}
+
+      /* ✅ 상단: 1줄에 하나씩(겹침 방지) */
+      .topline{
+        grid-template-columns: 1fr;
+        white-space:normal;
+        overflow:visible;
+        gap:6px;
+      }
+      .topitem{
+        font-size: clamp(18px, 4.8vw, 24px);
+        line-height:1.2;
+        overflow:visible;
+      }
+      .top-title, .top-session, .top-now{
+        justify-self:start;
+      }
 
       .panel{min-height:auto;}
       .tableArea{overflow:visible; border:none; background:transparent;}
@@ -201,13 +213,14 @@
       td{
         display:flex;
         justify-content:space-between;
-        align-items:flex-start; /* ✅ 내용이 줄바꿈될 때 위쪽 정렬 */
+        align-items:flex-start;
         text-align:left;
         border:0;
         border-top:1px solid rgba(0,255,133,.18);
         gap:12px;
         padding: 12px 12px;
         line-height:1.2;
+        font-size: clamp(18px, 4.8vw, 24px);
       }
       td:first-child{ border-top:0; }
 
@@ -219,7 +232,7 @@
         padding-top:2px;
       }
 
-      /* ✅ 모바일에서 “내용”은 … 금지 + 줄바꿈 허용 */
+      /* ✅ 모바일: 내용은 줄바꿈 허용(… 금지) */
       td[data-label="내용"] .cellValue{
         white-space:normal;
         overflow:visible;
@@ -227,14 +240,25 @@
         text-align:right;
       }
 
-      /* ✅ 모바일에서 시간/진행상황은 한 줄 유지(필요하면 …) */
-      td[data-label="시간"] .cellValue,
-      td[data-label="진행상황"] .cellValue{
-        flex:1;
+      /* ✅ 모바일: 시간은 2줄(요청 형식) */
+      td[data-label="시간"] .cellValue{
+        white-space:normal;   /* 줄바꿈 허용 */
+        overflow:visible;
+        text-overflow:clip;
         text-align:right;
+        line-height:1.15;
+      }
+
+      /* ✅ 모바일: 진행상황은 한 줄 유지 */
+      td[data-label="진행상황"] .cellValue{
         white-space:nowrap;
         overflow:hidden;
         text-overflow:ellipsis;
+        text-align:right;
+      }
+
+      .notice{
+        font-size: clamp(16px, 4.2vw, 22px);
       }
     }
   </style>
@@ -327,20 +351,23 @@
       return { mer, h12 };
     }
 
-    function fmtStartTime(h, m, compact){
+    /* ===== 시간 표기 =====
+      PC: 4시 ~ 5시 20분(80분) 같은 한 줄
+      Mobile: 4시~5시 20분
+              (80분)
+    */
+    function fmtStartTime(h, m){
       const { h12 } = to12(h);
-      if (m === 0) return `${h12}시`;
-      return compact ? `${h12}시${m}분` : `${h12}시 ${m}분`;
+      return (m === 0) ? `${h12}시` : `${h12}시 ${m}분`;
     }
-    function fmtEndTime(startH, endH, endM, compact){
+    function fmtEndTime(startH, endH, endM){
       const { h12: endH12 } = to12(endH);
       if(endH === startH){
-        return `${endM}분`;
+        return `${endM}분`; // 5시 20분 ~ 40분
       }
-      if(endM === 0) return `${endH12}시`;
-      return compact ? `${endH12}시${endM}분` : `${endH12}시 ${endM}분`;
+      return (endM === 0) ? `${endH12}시` : `${endH12}시 ${endM}분`;
     }
-    function fmtRangeWithDuration(startHHMM, endHHMM, compact){
+    function fmtRangeWithDuration(startHHMM, endHHMM){
       const base = nowSeoul(); base.setHours(0,0,0,0);
       const s = dateAt(base, startHHMM);
       const e = dateAt(base, endHHMM);
@@ -349,12 +376,14 @@
       const sh = s.getHours(), sm = s.getMinutes();
       const eh = e.getHours(), em = e.getMinutes();
 
-      const left = fmtStartTime(sh, sm, compact);
-      const right = fmtEndTime(sh, eh, em, compact);
+      const left = fmtStartTime(sh, sm);
+      const right = fmtEndTime(sh, eh, em);
 
-      return compact
-        ? `${left}~${right}(${durMin}분)`
-        : `${left} ~ ${right}(${durMin}분)`;
+      if (isMobile()){
+        // ✅ 모바일: (80분)은 다음 줄
+        return `${left}~${right}<br><span style="opacity:.9">(${durMin}분)</span>`;
+      }
+      return `${left} ~ ${right}(${durMin}분)`;
     }
 
     function fmtNowLine(d){
@@ -379,23 +408,23 @@
       return count;
     }
 
-    /** ✅ 상단: “한 줄 유지” + … 없이 글자 자동 축소(모바일 포함) */
-    function fitTopline(){
+    /** PC 상단 한 줄 유지(넘치면 축소) */
+    function fitToplinePC(){
+      if (isMobile()) return;
       const topline = document.getElementById("topline");
 
-      // 크게 시작 → 넘치면 줄이기
-      let scale = isMobile() ? 1.00 : 1.20;
+      let scale = 1.20;
       document.documentElement.style.setProperty("--topScale", String(scale));
 
-      for(let i=0;i<30;i++){
+      for(let i=0;i<18;i++){
         if (topline.scrollWidth <= topline.clientWidth) break;
-        scale -= 0.03;
-        if (scale < 0.55) break;
+        scale -= 0.05;
+        if (scale < 0.70) break;
         document.documentElement.style.setProperty("--topScale", String(scale));
       }
     }
 
-    /** ✅ PC: 표/하단 스케일 */
+    /** PC: 표 스케일/행높이 맞춤 */
     function setMainScale(){
       if (isMobile()) {
         document.documentElement.style.setProperty("--mainScale", "1");
@@ -406,8 +435,6 @@
       s = Math.max(1.10, Math.min(1.90, s));
       document.documentElement.style.setProperty("--mainScale", String(s));
     }
-
-    /** ✅ PC: 행 높이 분배 */
     function fitRows(){
       if (isMobile()) return;
 
@@ -427,8 +454,6 @@
 
       rows.forEach(r => { r.style.height = finalH + "px"; });
     }
-
-    /** ✅ PC: 표가 넘치면 mainScale 자동 감소 */
     function tableOverflows(){
       const cells = document.querySelectorAll("#mainTable th, #mainTable td");
       for (const cell of cells){
@@ -482,7 +507,6 @@
       }
 
       const baseToday = new Date(now); baseToday.setHours(0,0,0,0);
-      const compact = isMobile();
 
       SCHEDULE.forEach((item, idx) => {
         const tr = document.createElement("tr");
@@ -494,7 +518,7 @@
 
         const td2 = document.createElement("td");
         td2.setAttribute("data-label", "시간");
-        td2.innerHTML = `<span class="cellValue">${fmtRangeWithDuration(item.start, item.end, compact)}</span>`;
+        td2.innerHTML = `<span class="cellValue">${fmtRangeWithDuration(item.start, item.end)}</span>`;
 
         const td3 = document.createElement("td");
         td3.setAttribute("data-label", "진행상황");
@@ -518,13 +542,12 @@
       requestAnimationFrame(() => {
         setMainScale();
         fitMainScaleToTable();
-        fitTopline();
+        fitToplinePC(); // PC만 한 줄 맞춤(모바일은 1줄1항목이라 필요 없음)
       });
     }
 
     render();
     setInterval(render, 1000);
-
     window.addEventListener("resize", () => requestAnimationFrame(render));
   </script>
 </body>
