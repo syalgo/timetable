@@ -14,6 +14,9 @@
       --muted:#b7c7bf;
       --border:rgba(0,255,133,.55);
       --glow:0 0 18px rgba(0,255,133,.35);
+
+      /* ✅ JS가 화면 높이에 맞춰 자동으로 갱신 */
+      --scale: 1;
     }
     *{box-sizing:border-box}
     html, body{height:100%}
@@ -22,7 +25,7 @@
       background: radial-gradient(1200px 700px at 20% 0%, #0b1620 0%, var(--bg) 55%, #020305 100%);
       color:var(--text);
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Noto Sans KR", monospace;
-      overflow:hidden; /* ✅ 화면 꽉차게(스크롤 제거) */
+      overflow:hidden;
     }
     body::before{
       content:"";
@@ -43,7 +46,6 @@
       mix-blend-mode: overlay;
     }
 
-    /* ✅ 화면을 꽉 채우는 레이아웃 */
     .wrap{
       width:100vw;
       height:100vh;
@@ -64,9 +66,9 @@
     }
     .topitem{
       font-weight:900;
-      font-size: clamp(16px, 2.2vmin, 26px);
       letter-spacing:.2px;
       line-height:1.2;
+      font-size: calc(clamp(16px, 2.2vmin, 26px) * var(--scale));
     }
     .top-title{
       color:var(--neon);
@@ -87,10 +89,9 @@
       min-width: 260px;
     }
 
-    /* ✅ 패널이 남는 높이를 전부 차지 */
     .panel{
       flex:1;
-      min-height:0; /* flex 자식 overflow 계산 필수 */
+      min-height:0;
       background: linear-gradient(180deg, rgba(0,255,133,.06), rgba(0,0,0,.0));
       border:2px solid var(--border);
       border-radius:18px;
@@ -101,7 +102,6 @@
       gap: clamp(8px, 1.2vmin, 12px);
     }
 
-    /* 테이블 영역이 남는 공간을 다 먹도록 */
     .tableArea{
       flex:1;
       min-height:0;
@@ -125,14 +125,14 @@
       vertical-align:middle;
     }
     th{
-      font-size: clamp(16px, 2.0vmin, 26px);
       color:var(--warn);
       background: rgba(0,0,0,.35);
       text-shadow: 0 0 12px rgba(255,43,214,.18);
+      font-size: calc(clamp(16px, 2.0vmin, 26px) * var(--scale));
     }
     td{
-      font-size: clamp(16px, 2.1vmin, 28px);
       word-break:keep-all;
+      font-size: calc(clamp(18px, 2.2vmin, 30px) * var(--scale));
     }
     .col1{width:32%}
     .col2{width:43%}
@@ -153,17 +153,21 @@
       background: rgba(0,0,0,.25);
       padding: clamp(10px, 1.3vmin, 16px);
       line-height:1.55;
-      font-size: clamp(16px, 2.0vmin, 26px);
       color:var(--muted);
+      font-size: calc(clamp(16px, 2.0vmin, 26px) * var(--scale));
     }
     .notice b{color:var(--text)}
 
     /* 모바일: 카드형(가로 스크롤 없이) */
     @media (max-width: 860px){
-      body{overflow:auto;} /* 모바일은 스크롤 허용 */
-      .wrap{height:auto; min-height:100vh; overflow:visible;}
-      .panel{flex:0; min-height:auto;}
-      .tableArea{flex:0; overflow:visible; border:none; background:transparent;}
+      body{overflow:auto;}
+      .wrap{height:auto; min-height:100vh;}
+      .panel{min-height:auto;}
+      indicate{}
+      .tableArea{overflow:visible; border:none; background:transparent;}
+
+      /* 모바일에서는 너무 커지지 않게 스케일 고정 */
+      :root{ --scale: 1; }
 
       table, thead, tbody, th, tr { display:block; height:auto; }
       thead { display:none; }
@@ -292,7 +296,7 @@
     function fmtEndTime(startH, endH, endM){
       const { h12: endH12 } = to12(endH);
       if(endH === startH){
-        return `${endM}분`; // 5시 20분 ~ 40분
+        return `${endM}분`;
       }
       return (endM === 0) ? `${endH12}시` : `${endH12}시 ${endM}분`;
     }
@@ -331,9 +335,23 @@
       return count;
     }
 
-    /** ✅ 남는 세로 여백을 없애기: PC에서는 행 높이를 자동 분배 */
+    /** ✅ 화면 높이에 맞춰 글자 크기 자동 확대 */
+    function setScale(){
+      if (window.matchMedia("(max-width: 860px)").matches) {
+        document.documentElement.style.setProperty("--scale", "1");
+        return;
+      }
+      // 기준 높이 900px (FHD 모니터에서 적당한 크기)
+      const h = window.innerHeight;
+      let scale = h / 900;
+      // 너무 커지거나 작아지지 않게 제한
+      scale = Math.max(0.95, Math.min(1.35, scale));
+      document.documentElement.style.setProperty("--scale", String(scale));
+    }
+
+    /** ✅ 남는 세로 여백 없애기: PC에서 행 높이 자동 분배 */
     function fitRows(){
-      if (window.matchMedia("(max-width: 860px)").matches) return; // 모바일은 카드형이라 적용 X
+      if (window.matchMedia("(max-width: 860px)").matches) return;
 
       const tbody = document.getElementById("tbody");
       const rows = Array.from(tbody.querySelectorAll("tr"));
@@ -347,12 +365,9 @@
       const available = Math.max(0, areaH - theadH);
 
       const per = Math.floor(available / rows.length);
-      // 너무 작아지는 건 방지
-      const finalH = Math.max(per, 54);
+      const finalH = Math.max(per, 56);
 
-      rows.forEach(r => {
-        r.style.height = finalH + "px";
-      });
+      rows.forEach(r => { r.style.height = finalH + "px"; });
     }
 
     /** ====== 렌더 ====== */
@@ -364,7 +379,6 @@
       const isSaturday = (now.getDay() === 6);
       const isOffDay = OFF_DATES.has(todayKey);
 
-      // 회차: 토요일이면 오늘 기준, 아니면 다음 토요일 기준
       let sessionBase = isSaturday ? (() => { const d = new Date(now); d.setHours(0,0,0,0); return d; })()
                                   : nextSaturday(now);
       if(OFF_DATES.has(ymd(sessionBase))) sessionBase = addDays(sessionBase, 7);
@@ -376,7 +390,6 @@
       const tbody = document.getElementById("tbody");
       tbody.innerHTML = "";
 
-      // 토요일(휴강 제외)만 카운트
       const enableCountdown = isSaturday && !isOffDay;
 
       let activeIndex = -1;
@@ -423,13 +436,21 @@
         tbody.appendChild(tr);
       });
 
-      // 렌더 직후/폰트 계산 뒤에 맞춤
-      requestAnimationFrame(fitRows);
+      requestAnimationFrame(() => {
+        setScale();
+        fitRows();
+      });
     }
 
+    setScale();
     render();
     setInterval(render, 1000);
-    window.addEventListener("resize", () => requestAnimationFrame(fitRows));
+    window.addEventListener("resize", () => {
+      requestAnimationFrame(() => {
+        setScale();
+        fitRows();
+      });
+    });
   </script>
 </body>
 </html>
