@@ -16,12 +16,13 @@
       --glow:0 0 18px rgba(0,255,133,.35);
     }
     *{box-sizing:border-box}
+    html, body{height:100%}
     body{
       margin:0;
       background: radial-gradient(1200px 700px at 20% 0%, #0b1620 0%, var(--bg) 55%, #020305 100%);
       color:var(--text);
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Noto Sans KR", monospace;
-      overflow-x:hidden;
+      overflow:hidden; /* ✅ 화면 꽉차게(스크롤 제거) */
     }
     body::before{
       content:"";
@@ -42,7 +43,15 @@
       mix-blend-mode: overlay;
     }
 
-    .wrap{max-width:1280px;margin:0 auto;padding:22px 14px 28px}
+    /* ✅ 화면을 꽉 채우는 레이아웃 */
+    .wrap{
+      width:100vw;
+      height:100vh;
+      padding: clamp(10px, 1.8vmin, 20px);
+      display:flex;
+      flex-direction:column;
+      gap: clamp(8px, 1.2vmin, 14px);
+    }
 
     /* 상단 1줄(길면 자동 줄바꿈) */
     .topline{
@@ -52,18 +61,17 @@
       gap:10px 14px;
       flex-wrap:wrap;
       white-space:normal;
-      margin-bottom:12px;
     }
     .topitem{
       font-weight:900;
-      font-size: clamp(16px, 2.1vw, 22px);
+      font-size: clamp(16px, 2.2vmin, 26px);
       letter-spacing:.2px;
-      line-height:1.25;
+      line-height:1.2;
     }
     .top-title{
       color:var(--neon);
       text-shadow: var(--glow);
-      flex: 2 1 420px;
+      flex: 2 1 520px;
       min-width: 260px;
     }
     .top-session{
@@ -74,42 +82,56 @@
     .top-now{
       color:var(--neon2);
       text-shadow: 0 0 14px rgba(0,215,255,.2);
-      flex: 1 1 360px;
+      flex: 1 1 420px;
       text-align:right;
       min-width: 260px;
     }
 
+    /* ✅ 패널이 남는 높이를 전부 차지 */
     .panel{
+      flex:1;
+      min-height:0; /* flex 자식 overflow 계산 필수 */
       background: linear-gradient(180deg, rgba(0,255,133,.06), rgba(0,0,0,.0));
       border:2px solid var(--border);
       border-radius:18px;
       box-shadow: var(--glow);
-      padding:12px;
+      padding: clamp(10px, 1.4vmin, 16px);
+      display:flex;
+      flex-direction:column;
+      gap: clamp(8px, 1.2vmin, 12px);
+    }
+
+    /* 테이블 영역이 남는 공간을 다 먹도록 */
+    .tableArea{
+      flex:1;
+      min-height:0;
+      border-radius:14px;
+      overflow:hidden;
+      border:2px solid var(--border);
+      background: rgba(0,0,0,.25);
     }
 
     table{
       width:100%;
+      height:100%;
       border-collapse:collapse;
       table-layout:fixed;
-      background: rgba(0,0,0,.25);
-      border:2px solid var(--border);
-      border-radius:14px;
-      overflow:hidden;
     }
     th, td{
       border:1px solid rgba(0,255,133,.22);
-      padding:14px 10px;
+      padding: clamp(10px, 1.2vmin, 16px) clamp(8px, 1.0vmin, 14px);
       text-align:center;
       font-weight:900;
+      vertical-align:middle;
     }
     th{
-      font-size: clamp(16px, 1.6vw, 22px);
+      font-size: clamp(16px, 2.0vmin, 26px);
       color:var(--warn);
       background: rgba(0,0,0,.35);
       text-shadow: 0 0 12px rgba(255,43,214,.18);
     }
     td{
-      font-size: clamp(16px, 1.8vw, 22px);
+      font-size: clamp(16px, 2.1vmin, 28px);
       word-break:keep-all;
     }
     .col1{width:32%}
@@ -126,20 +148,24 @@
     .status-live{color:var(--neon); text-shadow: var(--glow)}
 
     .notice{
-      margin-top:14px;
-      padding:14px 16px;
       border:1px solid rgba(0,255,133,.25);
       border-radius:14px;
       background: rgba(0,0,0,.25);
-      line-height:1.6;
-      font-size: clamp(16px, 2.2vw, 22px);
+      padding: clamp(10px, 1.3vmin, 16px);
+      line-height:1.55;
+      font-size: clamp(16px, 2.0vmin, 26px);
       color:var(--muted);
     }
     .notice b{color:var(--text)}
 
     /* 모바일: 카드형(가로 스크롤 없이) */
     @media (max-width: 860px){
-      table, thead, tbody, th, tr { display:block; }
+      body{overflow:auto;} /* 모바일은 스크롤 허용 */
+      .wrap{height:auto; min-height:100vh; overflow:visible;}
+      .panel{flex:0; min-height:auto;}
+      .tableArea{flex:0; overflow:visible; border:none; background:transparent;}
+
+      table, thead, tbody, th, tr { display:block; height:auto; }
       thead { display:none; }
 
       tr{
@@ -155,7 +181,6 @@
         justify-content:space-between;
         align-items:center;
         text-align:left;
-        padding:14px 12px;
         border:0;
         border-top:1px solid rgba(0,255,133,.18);
         gap:12px;
@@ -169,16 +194,13 @@
         flex: 0 0 90px;
       }
 
-      /* ✅ 시간 셀은 무조건 한 줄로 */
       td.timeCell{ white-space:nowrap; }
-
       .top-now{ text-align:left; }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
-
     <div class="topline">
       <div class="topitem top-title">2026정보올림피아드 준비 in 세영로보틱스</div>
       <div class="topitem top-session" id="sessionLabel">0회차</div>
@@ -186,18 +208,20 @@
     </div>
 
     <div class="panel">
-      <table>
-        <thead>
-          <tr>
-            <th class="col1">내용</th>
-            <th class="col2">시간</th>
-            <th class="col3">진행상황</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
+      <div class="tableArea" id="tableArea">
+        <table id="mainTable">
+          <thead id="thead">
+            <tr>
+              <th class="col1">내용</th>
+              <th class="col2">시간</th>
+              <th class="col3">진행상황</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
 
-      <div class="notice">
+      <div class="notice" id="notice">
         <div>시험 결과에 따라 부족한 부분은 <b>평일 보충 수업 진행</b></div>
         <div>26년 1월 3일(토)은 <b>휴강!</b> 새해 복 많이 받으세요 ( __)</div>
       </div>
@@ -262,19 +286,16 @@
       return { mer, h12 };
     }
     function fmtStartTime(h, m){
-      // 시작: "5시 20분" 또는 "7시"
       const { h12 } = to12(h);
       return (m === 0) ? `${h12}시` : `${h12}시 ${m}분`;
     }
     function fmtEndTime(startH, endH, endM){
-      // 끝: 같은 시면 "40분" / 시가 바뀌면 "7시" 또는 "5시 20분"
       const { h12: endH12 } = to12(endH);
       if(endH === startH){
-        return `${endM}분`; // 요청 핵심: 5시 20분 ~ 40분
+        return `${endM}분`; // 5시 20분 ~ 40분
       }
       return (endM === 0) ? `${endH12}시` : `${endH12}시 ${endM}분`;
     }
-
     function fmtRangeWithDuration(startHHMM, endHHMM){
       const base = nowSeoul(); base.setHours(0,0,0,0);
       const s = dateAt(base, startHHMM);
@@ -286,23 +307,18 @@
 
       const left = fmtStartTime(sh, sm);
       const right = fmtEndTime(sh, eh, em);
-
       return `${left} ~ ${right}(${durMin}분)`;
     }
-
     function fmtNowLine(d){
-      // ✅ 상단 Now: "분" 포함
       const { mer, h12 } = to12(d.getHours());
       return `Now ${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 ${mer} ${h12}시 ${pad2(d.getMinutes())}분 ${pad2(d.getSeconds())}초`;
     }
-
     function fmtRemain(ms){
       const totalSec = Math.max(0, Math.floor(ms/1000));
       const m = Math.floor(totalSec/60);
       const s = totalSec % 60;
       return `${pad2(m)}분 ${pad2(s)}초 남음`;
     }
-
     function sessionNumberFor(dateYMD){
       const target = parseYMD(dateYMD);
       const start = parseYMD(START_SESSION_DATE);
@@ -313,6 +329,30 @@
         if(!OFF_DATES.has(ymd(d))) count++;
       }
       return count;
+    }
+
+    /** ✅ 남는 세로 여백을 없애기: PC에서는 행 높이를 자동 분배 */
+    function fitRows(){
+      if (window.matchMedia("(max-width: 860px)").matches) return; // 모바일은 카드형이라 적용 X
+
+      const tbody = document.getElementById("tbody");
+      const rows = Array.from(tbody.querySelectorAll("tr"));
+      if (rows.length === 0) return;
+
+      const tableArea = document.getElementById("tableArea");
+      const thead = document.getElementById("thead");
+      const theadH = thead ? thead.getBoundingClientRect().height : 0;
+
+      const areaH = tableArea.getBoundingClientRect().height;
+      const available = Math.max(0, areaH - theadH);
+
+      const per = Math.floor(available / rows.length);
+      // 너무 작아지는 건 방지
+      const finalH = Math.max(per, 54);
+
+      rows.forEach(r => {
+        r.style.height = finalH + "px";
+      });
     }
 
     /** ====== 렌더 ====== */
@@ -327,7 +367,6 @@
       // 회차: 토요일이면 오늘 기준, 아니면 다음 토요일 기준
       let sessionBase = isSaturday ? (() => { const d = new Date(now); d.setHours(0,0,0,0); return d; })()
                                   : nextSaturday(now);
-
       if(OFF_DATES.has(ymd(sessionBase))) sessionBase = addDays(sessionBase, 7);
 
       const sessionNo = sessionNumberFor(ymd(sessionBase));
@@ -383,10 +422,14 @@
         tr.appendChild(td3);
         tbody.appendChild(tr);
       });
+
+      // 렌더 직후/폰트 계산 뒤에 맞춤
+      requestAnimationFrame(fitRows);
     }
 
     render();
     setInterval(render, 1000);
+    window.addEventListener("resize", () => requestAnimationFrame(fitRows));
   </script>
 </body>
 </html>
