@@ -104,6 +104,29 @@
       gap: clamp(8px, 1.0vmin, 12px);
     }
 
+    .controls{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      padding: 2px 2px 0 2px;
+    }
+    .btn{
+      cursor:pointer;
+      font-weight:900;
+      padding:10px 14px;
+      border-radius:12px;
+      border:2px solid rgba(0,255,133,.6);
+      background: rgba(0,0,0,.25);
+      color:var(--text);
+      box-shadow: 0 0 18px rgba(0,255,133,.18);
+    }
+    .state{
+      opacity:.85;
+      color: var(--muted);
+      font-weight:900;
+    }
+
     .tableArea{
       flex:1;
       min-height:0;
@@ -148,7 +171,7 @@
       width:100%;
       overflow:hidden;
       text-overflow:ellipsis;
-      white-space:nowrap;
+      white-space:nowrap; /* PC: 한 줄 */
     }
 
     .col1{width:32%}
@@ -180,7 +203,6 @@
       body{overflow:auto;}
       .wrap{height:auto; min-height:100vh;}
 
-      /* 상단: 1줄에 하나씩 */
       .topline{
         grid-template-columns: 1fr;
         white-space:normal;
@@ -196,7 +218,7 @@
         justify-self:start;
       }
 
-      /* ✅ Now(파란색)만 2줄로 보여주기 */
+      /* ✅ Now는 모바일에서 2줄 */
       .top-now{
         white-space:normal;
         line-height:1.25;
@@ -245,6 +267,7 @@
         text-align:right;
       }
 
+      /* ✅ 모바일 시간: 다음 줄에 (80분) */
       td[data-label="시간"] .cellValue{
         white-space:normal;
         overflow:visible;
@@ -276,6 +299,12 @@
     </div>
 
     <div class="panel">
+      <div class="controls">
+        <button class="btn" id="alarmBtn">🔔 알림 켜기</button>
+        <span class="state" id="alarmState">알림: OFF</span>
+        <span class="state" id="dayState"></span>
+      </div>
+
       <div class="tableArea" id="tableArea">
         <table id="mainTable">
           <thead id="thead">
@@ -297,20 +326,23 @@
   </div>
 
   <script>
+    /** ====== 설정 ====== */
     const TIMEZONE = "Asia/Seoul";
-    const START_SESSION_DATE = "2025-12-06";
-    const OFF_DATES = new Set(["2026-01-03"]);
+    const START_SESSION_DATE = "2025-12-06"; // 1회차
+    const OFF_DATES = new Set(["2026-01-03"]); // 휴강
 
+    // ✅ 표에 보이는 이름(name)과 알림에 쓰는 이름(announce)을 분리
     const SCHEDULE = [
-      { name: "1교시", start: "16:00", end: "17:20" },
-      { name: "개인 정비 및 쉬는 시간", start: "17:20", end: "17:40" },
-      { name: "2교시", start: "17:40", end: "19:00" },
-      { name: "저녁식사", start: "19:00", end: "19:40" },
-      { name: "3교시", start: "19:40", end: "21:00" },
-      { name: "개인 정비 및 쉬는 시간", start: "21:00", end: "21:20" },
-      { name: "시험", start: "21:20", end: "22:00" },
+      { name: "1교시", announce: "1교시", start: "16:00", end: "17:20" },
+      { name: "개인 정비 및 쉬는 시간", announce: "쉬는 시간", start: "17:20", end: "17:40" },
+      { name: "2교시", announce: "2교시", start: "17:40", end: "19:00" },
+      { name: "저녁식사", announce: "저녁식사", start: "19:00", end: "19:40" },
+      { name: "3교시", announce: "3교시", start: "19:40", end: "21:00" },
+      { name: "개인 정비 및 쉬는 시간", announce: "쉬는 시간", start: "21:00", end: "21:20" },
+      { name: "시험", announce: "시험", start: "21:20", end: "22:00" },
     ];
 
+    /** ====== 유틸 ====== */
     const pad2 = n => String(n).padStart(2, "0");
     const isMobile = () => window.matchMedia("(max-width: 860px)").matches;
 
@@ -352,7 +384,7 @@
       return { mer, h12 };
     }
 
-    /* ✅ Now: 모바일이면 2줄, PC이면 1줄 */
+    // ✅ Now: 모바일이면 2줄, PC이면 1줄
     function fmtNowLine(d){
       const { mer, h12 } = to12(d.getHours());
       const dateLine = `Now ${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
@@ -366,9 +398,10 @@
     }
     function fmtEndTime(startH, endH, endM){
       const { h12: endH12 } = to12(endH);
-      if(endH === startH) return `${endM}분`;
+      if(endH === startH) return `${endM}분`; // 5시20분~40분
       return (endM === 0) ? `${endH12}시` : `${endH12}시 ${endM}분`;
     }
+
     function fmtRangeWithDuration(startHHMM, endHHMM){
       const base = nowSeoul(); base.setHours(0,0,0,0);
       const s = dateAt(base, startHHMM);
@@ -406,13 +439,22 @@
       return count;
     }
 
+    function getActiveIndex(now){
+      const base = new Date(now); base.setHours(0,0,0,0);
+      for(let i=0;i<SCHEDULE.length;i++){
+        const s = dateAt(base, SCHEDULE[i].start);
+        const e = dateAt(base, SCHEDULE[i].end);
+        if(now >= s && now < e) return i;
+      }
+      return -1;
+    }
+
+    /** ===== PC 레이아웃 맞춤 ===== */
     function fitToplinePC(){
       if (isMobile()) return;
       const topline = document.getElementById("topline");
-
       let scale = 1.20;
       document.documentElement.style.setProperty("--topScale", String(scale));
-
       for(let i=0;i<18;i++){
         if (topline.scrollWidth <= topline.clientWidth) break;
         scale -= 0.05;
@@ -434,7 +476,6 @@
 
     function fitRows(){
       if (isMobile()) return;
-
       const tbody = document.getElementById("tbody");
       const rows = Array.from(tbody.querySelectorAll("tr"));
       if (rows.length === 0) return;
@@ -442,13 +483,11 @@
       const tableArea = document.getElementById("tableArea");
       const thead = document.getElementById("thead");
       const theadH = thead ? thead.getBoundingClientRect().height : 0;
-
       const areaH = tableArea.getBoundingClientRect().height;
       const available = Math.max(0, areaH - theadH);
 
       const per = Math.floor(available / rows.length);
       const finalH = Math.max(per, 74);
-
       rows.forEach(r => { r.style.height = finalH + "px"; });
     }
 
@@ -463,7 +502,6 @@
 
     function fitMainScaleToTable(){
       if (isMobile()) return;
-
       let s = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--mainScale")) || 1;
       for(let i=0;i<20;i++){
         fitRows();
@@ -474,6 +512,104 @@
       }
     }
 
+    /** ===== 알림(소리 + alert + Notification) ===== */
+    let alarmsEnabled = false;
+    let audioCtx = null;
+
+    // 중복 방지
+    let lastActiveIndex = null;
+    let lastBoundaryKey = "";
+
+    function updateAlarmUI(){
+      document.getElementById("alarmState").textContent = `알림: ${alarmsEnabled ? "ON" : "OFF"}`;
+    }
+
+    async function requestNotificationPermission(){
+      if(!("Notification" in window)) return false;
+      if(Notification.permission === "granted") return true;
+      if(Notification.permission === "denied") return false;
+      const p = await Notification.requestPermission();
+      return p === "granted";
+    }
+    function pushNotification(title, body){
+      if(!("Notification" in window)) return;
+      if(Notification.permission !== "granted") return;
+      new Notification(title, { body });
+    }
+
+    function initAudio(){
+      if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if(audioCtx.state === "suspended") audioCtx.resume();
+    }
+
+    function beep(times=1){
+      if(!alarmsEnabled) return;
+      try{
+        initAudio();
+        for(let i=0;i<times;i++){
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = "square";
+          o.frequency.value = 880;
+          g.gain.value = 0.06;
+
+          o.connect(g);
+          g.connect(audioCtx.destination);
+
+          const start = audioCtx.currentTime + i*0.22;
+          o.start(start);
+          o.stop(start + 0.16);
+        }
+      }catch(e){}
+    }
+
+    // 메시지: 시작 / 전환 / 마지막 종료
+    function buildTransitionMessage(prevIdx, nextIdx){
+      const prev = (prevIdx !== null && prevIdx >= 0) ? SCHEDULE[prevIdx].announce : null;
+      const next = (nextIdx !== null && nextIdx >= 0) ? SCHEDULE[nextIdx].announce : null;
+
+      if(prev && next) return `${prev}가 끝나고 ${next}이 시작되었습니다`;
+      if(!prev && next) return `${next}가 시작되었습니다`;
+      if(prev && !next) return `${prev}가 끝났습니다`;
+      return null;
+    }
+
+    // 실제 울림 + alert + (선택) Notification
+    function fireAlarm(msg){
+      if(!alarmsEnabled || !msg) return;
+      beep(2);
+      // 시스템 알림(허용된 경우)
+      pushNotification("시간표 알림", msg);
+      // 확인창(요청사항)
+      alert(msg);
+    }
+
+    document.getElementById("alarmBtn").addEventListener("click", async () => {
+      const now = nowSeoul();
+      const todayKey = ymd(now);
+      const isSat = (now.getDay() === 6);
+      const isOff = OFF_DATES.has(todayKey);
+      const enableCountdown = isSat && !isOff;
+
+      alarmsEnabled = !alarmsEnabled;
+
+      if(alarmsEnabled){
+        await requestNotificationPermission();
+        // 오디오 활성화 (클릭 순간)
+        beep(1);
+
+        // ✅ 알림 켠 순간엔 “즉시 시작되었습니다”가 뜨지 않게 현재 상태를 기준으로 동기화
+        lastActiveIndex = enableCountdown ? getActiveIndex(now) : -1;
+        lastBoundaryKey = `${todayKey}_${lastActiveIndex}`;
+
+      }else{
+        // OFF면 그냥 유지
+      }
+      updateAlarmUI();
+    });
+    updateAlarmUI();
+
+    /** ===== 렌더 ===== */
     function render(){
       const now = nowSeoul();
       document.getElementById("nowText").innerHTML = fmtNowLine(now);
@@ -481,7 +617,12 @@
       const todayKey = ymd(now);
       const isSat = (now.getDay() === 6);
       const isOff = OFF_DATES.has(todayKey);
+      const enableCountdown = isSat && !isOff;
 
+      document.getElementById("dayState").textContent =
+        enableCountdown ? "토요일 진행중 ✅" : (isSat && isOff ? "오늘은 휴강 ❌" : "토요일에만 진행");
+
+      // 회차 계산(다음 토요일 기준, 휴강이면 다음주로)
       let sessionBase = isSat ? (() => { const d = new Date(now); d.setHours(0,0,0,0); return d; })()
                               : nextSaturday(now);
       if(OFF_DATES.has(ymd(sessionBase))) sessionBase = addDays(sessionBase, 7);
@@ -489,26 +630,34 @@
       const sessionNo = sessionNumberFor(ymd(sessionBase));
       document.getElementById("sessionLabel").textContent = (sessionNo > 0) ? `${sessionNo}회차` : `0회차`;
 
-      const tbody = document.getElementById("tbody");
-      tbody.innerHTML = "";
+      // 현재 진행 인덱스
+      const activeIndex = enableCountdown ? getActiveIndex(now) : -1;
 
-      const enableCountdown = isSat && !isOff;
-      let activeIndex = -1;
+      // ✅ 알림 전환 감지 (활성화 & 토요일진행중일 때만)
+      if(alarmsEnabled && enableCountdown){
+        // "같은 전환" 중복 방지용 키: 오늘날짜 + (이전->현재) + 현재시각(분 단위)
+        const minuteKey = `${todayKey}_${now.getHours()}:${now.getMinutes()}`;
+        const boundaryKey = `${minuteKey}_${lastActiveIndex}->${activeIndex}`;
 
-      if(enableCountdown){
-        const base = new Date(now); base.setHours(0,0,0,0);
-        for(let i=0;i<SCHEDULE.length;i++){
-          const s = dateAt(base, SCHEDULE[i].start);
-          const e = dateAt(base, SCHEDULE[i].end);
-          if(now >= s && now < e){ activeIndex = i; break; }
+        if(lastActiveIndex !== null && activeIndex !== lastActiveIndex && boundaryKey !== lastBoundaryKey){
+          lastBoundaryKey = boundaryKey;
+          const msg = buildTransitionMessage(lastActiveIndex, activeIndex);
+          fireAlarm(msg);
         }
       }
+
+      // lastActiveIndex 갱신(알림 OFF라도 갱신해두면 편함)
+      lastActiveIndex = activeIndex;
+
+      // 표 렌더
+      const tbody = document.getElementById("tbody");
+      tbody.innerHTML = "";
 
       const baseToday = new Date(now); baseToday.setHours(0,0,0,0);
 
       SCHEDULE.forEach((item, idx) => {
         const tr = document.createElement("tr");
-        if(idx === activeIndex) tr.classList.add("active");
+        if(enableCountdown && idx === activeIndex) tr.classList.add("active");
 
         const td1 = document.createElement("td");
         td1.setAttribute("data-label", "내용");
@@ -526,6 +675,7 @@
         }else{
           const s = dateAt(baseToday, item.start);
           const e = dateAt(baseToday, item.end);
+
           if(now < s) td3.innerHTML = `<span class="cellValue status-plan">예정</span>`;
           else if(now >= e) td3.innerHTML = `<span class="cellValue status-done">완료</span>`;
           else td3.innerHTML = `<span class="cellValue status-live">${fmtRemain(e - now)}</span>`;
