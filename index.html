@@ -568,9 +568,9 @@
       const prev = (prevIdx !== null && prevIdx >= 0) ? SCHEDULE[prevIdx].announce : null;
       const next = (nextIdx !== null && nextIdx >= 0) ? SCHEDULE[nextIdx].announce : null;
 
-      if(prev && next) return `${prev}가 끝나고 ${next}이 시작되었습니다`;
-      if(!prev && next) return `${next}가 시작되었습니다`;
-      if(prev && !next) return `${prev}가 끝났습니다`;
+      if(prev && next) return `${prev} 끝나고 ${next} 시작되었습니다`;
+      if(!prev && next) return `${next} 시작되었습니다`;
+      if(prev && !next) return `${prev} 끝났습니다`;
       return null;
     }
 
